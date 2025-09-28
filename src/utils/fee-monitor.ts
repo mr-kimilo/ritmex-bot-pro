@@ -85,8 +85,10 @@ export class FeeMonitor {
     this.feeRecords.push(feeRecord);
     this.cleanOldRecords();
     
-    // 添加调试日志
-    console.log(`📊 [FeeMonitor] 记录交易: ${trade.side} ${trade.quantity} ${trade.symbol} @ ${trade.price}, 手续费: $${fee.toFixed(4)}`);
+    // 添加调试日志（可通过环境变量控制）
+    if (process.env.DEBUG_FEE_MONITOR === 'true') {
+      console.log(`📊 [FeeMonitor] 记录交易: ${trade.side} ${trade.quantity} ${trade.symbol} @ ${trade.price}, 手续费: $${fee.toFixed(4)}`);
+    }
     
     // 检查是否需要记录日志
     if (Date.now() - this.lastLogTime > this.logInterval) {
@@ -96,6 +98,7 @@ export class FeeMonitor {
 
     // 检查手续费保护
     if (this.enableFeeProtection && this.shouldStopTrading()) {
+      // 重要警告始终显示
       console.log(`🚨 [FeeMonitor] 手续费保护触发，建议暂停交易`);
       return { shouldStop: true, reason: 'fee_limit_exceeded' };
     }
@@ -144,15 +147,18 @@ export class FeeMonitor {
   logFeeSummary(): void {
     const summary = this.getFeeSummary();
     
-    console.log(`💰 [FeeMonitor] 手续费汇总报告:`);
-    console.log(`   📊 累计手续费: $${summary.totalFee.toFixed(4)} USDT`);
-    console.log(`   📈 今日手续费: $${summary.dailyFee.toFixed(4)} (${summary.dailyFeePercent.toFixed(2)}% 总资金)`);
-    console.log(`   ⏱️  小时手续费: $${summary.hourlyFee.toFixed(4)} (${summary.hourlyFeePercent.toFixed(2)}% 总资金)`);
-    console.log(`   🔄 交易笔数: ${summary.tradeCount}`);
-    console.log(`   💹 累计成交额: $${summary.totalVolume.toFixed(2)} USDT`);
-    console.log(`   📋 实际费率: ${(summary.avgFeeRate * 100).toFixed(4)}%`);
+    // 只在调试模式下显示详细的手续费报告
+    if (process.env.DEBUG_FEE_MONITOR === 'true') {
+      console.log(`💰 [FeeMonitor] 手续费汇总报告:`);
+      console.log(`   📊 累计手续费: $${summary.totalFee.toFixed(4)} USDT`);
+      console.log(`   📈 今日手续费: $${summary.dailyFee.toFixed(4)} (${summary.dailyFeePercent.toFixed(2)}% 总资金)`);
+      console.log(`   ⏱️  小时手续费: $${summary.hourlyFee.toFixed(4)} (${summary.hourlyFeePercent.toFixed(2)}% 总资金)`);
+      console.log(`   🔄 交易笔数: ${summary.tradeCount}`);
+      console.log(`   💹 累计成交额: $${summary.totalVolume.toFixed(2)} USDT`);
+      console.log(`   📋 实际费率: ${(summary.avgFeeRate * 100).toFixed(4)}%`);
+    }
     
-    // 警告检查
+    // 重要警告始终显示（无论是否在调试模式）
     if (summary.dailyFeePercent > this.feeWarningThreshold) {
       console.log(`⚠️  [FeeMonitor] 今日手续费占比较高: ${summary.dailyFeePercent.toFixed(2)}%`);
     }

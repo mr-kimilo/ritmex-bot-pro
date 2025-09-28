@@ -49,28 +49,20 @@ export function EnhancedTrendApp({ onExit }: EnhancedTrendAppProps) {
 
         // K线管理器配置
         const klineConfig: KlineManagerConfig = {
-          redisHost: redisConfig.host,
-          redisPort: redisConfig.port,
-          redisPassword: redisConfig.password,
-          cacheTtl: 3600,
-          maxKlines: 200,
-          keyPrefix: `kline:${tradingConfig.symbol}:`
+          symbol: tradingConfig.symbol,
+          interval: '1m',
+          redisConfig: redisConfig,
+          exchange: exchange,
+          bufferSize: 200
         };
 
         // 市场分析器配置
         const analyzerConfig: MarketAnalyzerConfig = {
-          kdjPeriod: technicalAnalysisConfig?.kdjPeriod || 14,
-          rsiPeriod: technicalAnalysisConfig?.rsiPeriod || 14,
-          volumeMaPeriod: technicalAnalysisConfig?.volumeMaPeriod || 20,
-          confidenceThreshold: technicalAnalysisConfig?.confidenceThreshold || 0.7,
+          symbol: tradingConfig.symbol,
+          lookbackPeriod: technicalAnalysisConfig?.lookbackPeriod || 50,
           priceRangeHours: technicalAnalysisConfig?.priceRangeHours || 3,
-          volatilityPeriod: technicalAnalysisConfig?.volatilityPeriod || 20,
-          minVolumeRatio: technicalAnalysisConfig?.minVolumeRatio || 1.5,
-          priceRangePeriod: 24,
-          overboughtLevel: 80,
-          oversoldLevel: 20,
-          highVolumeThreshold: 2.0,
-          cacheTTL: 300
+          volatilityPeriod: 20,
+          minVolumeRatio: technicalAnalysisConfig?.minVolumeRatio || 1.5
         };
 
         // 创建增强趋势引擎

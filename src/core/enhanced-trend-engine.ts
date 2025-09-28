@@ -64,7 +64,14 @@ export class EnhancedTrendEngine {
     this.exchange = exchange;
     this.baseEngine = new TrendEngine(config, exchange);
     this.isEnhancedEnabled = enableEnhanced;
-    this.feeMonitor = new FeeMonitor(config.symbol, 1000); // 1000美元基准
+    this.feeMonitor = new FeeMonitor({
+      feeRate: config.feeRate,
+      maxDailyFeePct: config.maxDailyFeePct,
+      maxHourlyFeePct: config.maxHourlyFeePct,
+      feeWarningThreshold: config.feeWarningThreshold,
+      enableFeeProtection: config.enableFeeProtection,
+      logInterval: config.logFeeSummaryInterval
+    });
     
     if (enableEnhanced && klineConfig && analyzerConfig) {
       this.klineManager = new RedisKlineManager(klineConfig);

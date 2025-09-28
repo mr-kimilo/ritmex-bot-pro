@@ -45,7 +45,9 @@ export class MarketAnalyzer {
     forceRefresh: boolean = false
   ): Promise<MarketAnalysisResult | null> {
     try {
-      console.log(`🔍 开始分析${symbol}市场状况...`);
+      if (process.env.DEBUG_MARKET_ANALYZER === 'true') {
+        console.log(`🔍 开始分析${symbol}市场状况...`);
+      }
 
       // 检查是否需要刷新数据
       const needsRefresh = await this.klineManager.needsRefresh(symbol, '15m') || forceRefresh;
@@ -91,7 +93,9 @@ export class MarketAnalyzer {
       // 存储到Redis
       await this.klineManager.storeAnalysis(symbol, analysisResult);
       
-      console.log(`✅ ${symbol}市场分析完成 - 信号: ${analysisResult.signal}, 置信度: ${(analysisResult.confidence * 100).toFixed(1)}%`);
+      if (process.env.DEBUG_MARKET_ANALYZER === 'true') {
+        console.log(`✅ ${symbol}市场分析完成 - 信号: ${analysisResult.signal}, 置信度: ${(analysisResult.confidence * 100).toFixed(1)}%`);
+      }
       
       return analysisResult;
 
