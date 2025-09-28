@@ -147,6 +147,21 @@ export class Logger {
   public getLogFile(): string | null {
     return this.currentLogFile;
   }
+
+  // 直接写入日志文件的方法（不依赖console重写）
+  public writeLog(level: 'LOG' | 'ERROR' | 'WARN' | 'INFO', message: string): void {
+    this.writeToFile(`[${level}] ${message}`);
+  }
+
+  // 写入交易事件日志
+  public writeTrade(message: string): void {
+    this.writeToFile(`[TRADE] ${message}`);
+  }
+
+  // 写入系统事件日志
+  public writeSystem(message: string): void {
+    this.writeToFile(`[SYSTEM] ${message}`);
+  }
 }
 
 // 创建全局logger实例

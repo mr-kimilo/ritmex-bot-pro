@@ -30,6 +30,7 @@ import { isUnknownOrderError } from "../utils/errors";
 import { roundDownToTick } from "../utils/math";
 import { createTradeLog, type TradeLogEntry } from "../state/trade-log";
 import { FeeMonitor, type FeeStats } from "../utils/fee-monitor";
+import { logger } from "../utils/logger";
 import { DynamicRiskManager, createDefaultDynamicRiskConfig, type DynamicRiskParams } from "../utils/dynamic-risk";
 import { GreedyTakeProfitManager, type GreedyProfitConfig } from "../utils/greedy-take-profit";
 
@@ -147,6 +148,10 @@ export class TrendEngine {
       const feeSummary = this.feeMonitor.getFeeSummary();
       this.tradeLog.push("info", `💰 手动平仓手续费: $${feeAmount.toFixed(6)} USDT (日累计: $${feeSummary.dailyFee.toFixed(6)} USDT)`);
       
+      // 记录到日志文件
+      logger.writeTrade(`手动平仓: ${direction === "long" ? "多头" : "空头"} ${Math.abs(this.lastPositionAmount)} @ $${currentPrice.toFixed(4)}, 手续费: $${feeAmount.toFixed(6)}`);
+      logger.writeTrade(`平仓${pnl > 0 ? "盈利" : "亏损"}: $${Math.abs(pnl).toFixed(4)} USDT`);
+      
       // 记录手动平仓事件
       const pnlText = pnl > 0 ? `盈利 $${pnl.toFixed(4)}` : `亏损 $${Math.abs(pnl).toFixed(4)}`;
       this.tradeLog.push("close", 
@@ -184,6 +189,9 @@ export class TrendEngine {
         const feeSummary = this.feeMonitor.getFeeSummary();
         this.tradeLog.push("info", `💰 手动开仓手续费: $${feeAmount.toFixed(6)} USDT (日累计: $${feeSummary.dailyFee.toFixed(6)} USDT)`);
         this.tradeLog.push("open", `🔄 检测到手动开仓: ${direction === "long" ? "多头" : "空头"} ${Math.abs(position.positionAmt)} @ $${position.entryPrice.toFixed(4)}`);
+        
+        // 记录到日志文件
+        logger.writeTrade(`手动开仓: ${direction === "long" ? "多头" : "空头"} ${Math.abs(position.positionAmt)} @ $${position.entryPrice.toFixed(4)}, 手续费: $${feeAmount.toFixed(6)}`);
       }
       
       this.lastPositionAmount = position.positionAmt;
@@ -313,6 +321,9 @@ export class TrendEngine {
 
   private bootstrap(): void {
     try {
+      // 记录系统启动
+      logger.writeSystem("开始订阅账户数据流...");
+      
       this.exchange.watchAccount((snapshot) => {
         try {
           // 记录持仓变化
@@ -411,6 +422,9 @@ export class TrendEngine {
                 const feeAmount = tradeValue * 0.0004; // ASTER手续费率0.04%
                 const feeSummary = this.feeMonitor.getFeeSummary();
                 this.tradeLog.push("info", `💰 交易手续费: $${feeAmount.toFixed(6)} USDT (日累计: $${feeSummary.dailyFee.toFixed(6)} USDT)`);
+                
+                // 记录到日志文件
+                logger.writeTrade(`订单成交: ${order.side} ${order.executedQty} @ $${Number(order.avgPrice).toFixed(4)}, 手续费: $${feeAmount.toFixed(6)}`);
                 
                 // 立即增加交易计数（不等到仓位关闭）
                 // 注释：这里不增加totalTrades，因为应该在仓位完全关闭时才算一笔完整交易
