@@ -1,0 +1,43 @@
+{
+  "name": "ritmex-bot-pro",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "node --import tsx index.ts",
+    "dev:bun": "bun run index.ts",
+    "start": "node --import tsx index.ts",
+    "start:bun": "bun run index.ts",
+    "start:bnb": "node --import tsx bat/multi-instance-launcher.ts",
+    "start:sol": "node --import tsx bat/multi-instance-launcher.ts",
+    "start:bnb-sol": "node --import tsx bat/multi-instance-launcher.ts",
+    "start:bnb-aster": "node --import tsx bat/multi-instance-launcher.ts",
+    "start:custom": "node --import tsx bat/multi-instance-launcher.ts",
+    "enhanced": "node --import tsx enhanced-demo.ts",
+    "enhanced:bun": "bun run enhanced-demo.ts",
+    "enhanced:test": "node --import tsx enhanced-demo.ts --test",
+    "demo:enhanced-trading": "node --import tsx tests/enhanced-trading-demo.ts",
+    "test": "bun x vitest run",
+    "test:watch": "bun x vitest",
+    "test:config": "node --import tsx tests/test-config.ts",
+    "test:api": "node --import tsx tests/test-api-config.ts",
+    "test:routing": "node --import tsx tests/test-routing.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "tsx": "^4.20.5",
+    "vitest": "^3.2.4"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@types/redis": "^4.0.10",
+    "ccxt": "^4.5.5",
+    "dotenv": "^17.2.2",
+    "ink": "^6.3.1",
+    "react": "^19.1.1",
+    "redis": "^5.8.2",
+    "ws": "^8.18.3"
+  }
+}

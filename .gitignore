@@ -1,0 +1,41 @@
+# dependencies (bun install)
+node_modules
+data/*
+
+# output
+out
+dist
+*.tgz
+
+# code coverage
+coverage
+*.lcov
+
+# logs
+log
+_.log
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+
+# dotenv environment variable files
+#.env
+
+# API credentials file (security sensitive)
+api-credentials
+config/api-config.json
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+.env.bnb
+.env.sol
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# IntelliJ based IDEs
+.idea
+
+# Finder (MacOS) folder config
+.DS_Store
