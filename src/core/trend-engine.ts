@@ -300,6 +300,11 @@ export class TrendEngine {
           // 检查订单状态变化并记录手续费
           if (Array.isArray(orders)) {
             for (const order of orders) {
+              // 添加调试日志来跟踪订单
+              if (process.env.DEBUG_TRADE_RECORDING === 'true') {
+                console.log(`🔍 检查订单: ${order.orderId} | 状态: ${order.status} | 成交: ${order.executedQty} | 价格: ${order.avgPrice}`);
+              }
+              
               if (order.symbol === this.config.symbol && order.status === 'FILLED' && order.executedQty && order.avgPrice) {
                 // 记录成交信息到交易日志
                 this.tradeLog.push("order", `✅ 订单成交: ${order.side} ${order.executedQty} @ $${Number(order.avgPrice).toFixed(4)}`);
@@ -318,6 +323,10 @@ export class TrendEngine {
                 const feeAmount = tradeValue * 0.0004; // ASTER手续费率0.04%
                 const feeSummary = this.feeMonitor.getFeeSummary();
                 this.tradeLog.push("info", `💰 交易手续费: $${feeAmount.toFixed(6)} USDT (日累计: $${feeSummary.dailyFee.toFixed(6)} USDT)`);
+                
+                // 立即增加交易计数（不等到仓位关闭）
+                this.totalTrades += 1;
+                console.log(`📊 记录交易: 总交易数现在为 ${this.totalTrades}`);
                 
                 if (feeResult.shouldStop) {
                   this.tradeLog.push("warning", `🚨 手续费保护触发: ${feeResult.reason}`);
@@ -442,7 +451,8 @@ export class TrendEngine {
       } else {
         const result = await this.handlePositionManagement(position, price);
         if (result.closed) {
-          this.totalTrades += 1;
+          // 不在这里增加 totalTrades，因为已经在订单成交时计算了
+          // this.totalTrades += 1;  // 注释掉避免重复计算
           this.totalProfit += result.pnl;
         }
       }
