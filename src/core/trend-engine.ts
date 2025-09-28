@@ -131,6 +131,22 @@ export class TrendEngine {
       this.totalTrades += 1;
       this.totalProfit += pnl;
       
+      // 记录手动平仓的手续费
+      const closeSide = direction === "long" ? "SELL" : "BUY";
+      this.feeMonitor.recordTrade({
+        symbol: this.config.symbol,
+        side: closeSide,
+        quantity: Math.abs(this.lastPositionAmount),
+        price: currentPrice,
+        orderId: `manual_close_${Date.now()}`
+      });
+      
+      // 计算并记录手续费信息
+      const tradeValue = Math.abs(this.lastPositionAmount) * currentPrice;
+      const feeAmount = tradeValue * this.config.feeRate;
+      const feeSummary = this.feeMonitor.getFeeSummary();
+      this.tradeLog.push("info", `💰 手动平仓手续费: $${feeAmount.toFixed(6)} USDT (日累计: $${feeSummary.dailyFee.toFixed(6)} USDT)`);
+      
       // 记录手动平仓事件
       const pnlText = pnl > 0 ? `盈利 $${pnl.toFixed(4)}` : `亏损 $${Math.abs(pnl).toFixed(4)}`;
       this.tradeLog.push("close", 
@@ -148,6 +164,28 @@ export class TrendEngine {
     // 更新仓位状态追踪
     this.wasPositionOpen = hasPosition;
     if (hasPosition) {
+      // 检测手动开仓：如果之前没有仓位，现在有了
+      if (!hadPosition && hasPosition) {
+        const direction = position.positionAmt > 0 ? "long" : "short";
+        const openSide = direction === "long" ? "BUY" : "SELL";
+        
+        // 记录手动开仓的手续费
+        this.feeMonitor.recordTrade({
+          symbol: this.config.symbol,
+          side: openSide,
+          quantity: Math.abs(position.positionAmt),
+          price: position.entryPrice,
+          orderId: `manual_open_${Date.now()}`
+        });
+        
+        // 计算并记录手续费信息
+        const tradeValue = Math.abs(position.positionAmt) * position.entryPrice;
+        const feeAmount = tradeValue * this.config.feeRate;
+        const feeSummary = this.feeMonitor.getFeeSummary();
+        this.tradeLog.push("info", `💰 手动开仓手续费: $${feeAmount.toFixed(6)} USDT (日累计: $${feeSummary.dailyFee.toFixed(6)} USDT)`);
+        this.tradeLog.push("open", `🔄 检测到手动开仓: ${direction === "long" ? "多头" : "空头"} ${Math.abs(position.positionAmt)} @ $${position.entryPrice.toFixed(4)}`);
+      }
+      
       this.lastPositionAmount = position.positionAmt;
       this.lastPositionEntryPrice = position.entryPrice;
     }

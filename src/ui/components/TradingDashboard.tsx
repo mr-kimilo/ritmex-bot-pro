@@ -467,23 +467,34 @@ function PerformancePanel({ performance, position, lastUpdated }: {
   position: any; 
   lastUpdated: number; 
 }) {
-  const profitColor = performance.totalProfit > 0 ? 'green' : performance.totalProfit < 0 ? 'red' : 'gray';
+  // 计算总盈亏（已完成交易 + 当前未实现盈亏）
+  const unrealizedPnl = position?.unrealizedProfit || 0;
+  const totalPnl = performance.totalProfit + unrealizedPnl;
+  const profitColor = totalPnl > 0 ? 'green' : totalPnl < 0 ? 'red' : 'gray';
+  const unrealizedColor = unrealizedPnl > 0 ? 'green' : unrealizedPnl < 0 ? 'red' : 'gray';
+  
   const successRate = performance.totalTrades > 0 ? 
     ((performance.totalProfit > 0 ? 1 : 0) * 100).toFixed(1) : '0';
 
   return (
     <Box borderStyle="single" borderColor="cyan" paddingX={1}>
-      <Box flexDirection="row" justifyContent="space-between">
+      <Box flexDirection="column">
+        <Box flexDirection="row" justifyContent="space-between">
+          <Box flexDirection="row">
+            <Text color="cyan">📈 总盈亏: </Text>
+            <Text color={profitColor}>${totalPnl?.toFixed(4)}</Text>
+            <Text color="cyan"> (已实现: ${performance.totalProfit?.toFixed(4)}</Text>
+            <Text color={unrealizedColor}> + 未实现: ${unrealizedPnl?.toFixed(4)})</Text>
+          </Box>
+          <Text color="gray" dimColor>
+            更新: {new Date(lastUpdated).toLocaleTimeString()}
+          </Text>
+        </Box>
         <Box flexDirection="row">
-          <Text color="cyan">📈 总盈亏: </Text>
-          <Text color={profitColor}>${performance.totalProfit?.toFixed(4)}</Text>
-          <Text color="cyan"> | 交易: {performance.totalTrades}</Text>
+          <Text color="cyan">📊 交易: {performance.totalTrades}</Text>
           <Text color="cyan"> | 成功率: {successRate}%</Text>
           <Text color="cyan"> | 成交量: ${formatNumber(performance.sessionVolume, 2)}</Text>
         </Box>
-        <Text color="gray" dimColor>
-          更新: {new Date(lastUpdated).toLocaleTimeString()}
-        </Text>
       </Box>
     </Box>
   );

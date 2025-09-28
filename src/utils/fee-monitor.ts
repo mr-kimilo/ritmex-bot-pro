@@ -59,7 +59,13 @@ export class FeeMonitor {
   }
 
   updateBalance(balance: number): void {
+    const previousBalance = this.totalBalance;
     this.totalBalance = balance;
+    
+    // 添加调试日志（可通过环境变量控制）
+    if (process.env.DEBUG_FEE_MONITOR === 'true') {
+      console.log(`📊 [FeeMonitor] 余额更新: $${previousBalance.toFixed(2)} → $${balance.toFixed(2)}`);
+    }
   }
 
   recordTrade(trade: {

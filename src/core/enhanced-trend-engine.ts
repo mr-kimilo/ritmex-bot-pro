@@ -364,12 +364,16 @@ export class EnhancedTrendEngine {
     const baseSnapshot = this.baseEngine.getSnapshot();
     
     if (!this.isEnhancedEnabled) {
-      return baseSnapshot as EnhancedTrendEngineSnapshot;
+      return {
+        ...baseSnapshot,
+        feeStats: this.feeMonitor.getFeeStats() // 确保feeStats始终可用
+      } as EnhancedTrendEngineSnapshot;
     }
 
     // 增强快照数据
     return {
       ...baseSnapshot,
+      feeStats: this.feeMonitor.getFeeStats(), // 将feeStats放在根级别
       enhanced: {
         enabled: this.isEnhancedEnabled,
         lastAnalysis: this.lastMarketAnalysis,
