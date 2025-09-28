@@ -5,6 +5,8 @@ import { MakerEngine } from '../src/core/maker-engine.ts';
 import { OffsetMakerEngine } from '../src/core/offset-maker-engine.ts';
 import { AsterExchangeAdapter } from '../src/exchanges/aster-adapter.ts';
 import { ApiCredentialsFactory } from '../src/api-credentials-factory.ts';
+import type { KlineManagerConfig } from '../src/utils/redis-kline-manager.ts';
+import type { MarketAnalyzerConfig } from '../src/utils/market-analyzer.ts';
 import readline from 'readline';
 
 /**
@@ -108,6 +110,37 @@ class MultiInstanceLauncher {
   }
 
   /**
+   * 创建增强趋势引擎的默认配置
+   */
+  private createEnhancedConfigs(): { klineConfig: KlineManagerConfig; analyzerConfig: MarketAnalyzerConfig } {
+    const klineConfig: KlineManagerConfig = {
+      redisHost: process.env.REDIS_HOST || 'localhost',
+      redisPort: parseInt(process.env.REDIS_PORT || '6379'),
+      redisPassword: process.env.REDIS_PASSWORD,
+      cacheTtl: parseInt(process.env.REDIS_TTL || '3600'),
+      keyPrefix: process.env.REDIS_KLINE_KEY_PREFIX || 'kline:',
+      maxKlines: parseInt(process.env.REDIS_KLINE_MAX_COUNT || '1000')
+    };
+
+    const analyzerConfig: MarketAnalyzerConfig = {
+      kdjPeriod: parseInt(process.env.TECHNICAL_KDJ_PERIOD || '14'),
+      rsiPeriod: parseInt(process.env.TECHNICAL_RSI_PERIOD || '14'),
+      volumeMaPeriod: parseInt(process.env.TECHNICAL_VOLUME_PERIOD || '20'),
+      priceRangePeriod: parseInt(process.env.TECHNICAL_PRICE_RANGE_PERIOD || '180'),
+      priceRangeHours: parseInt(process.env.TECHNICAL_PRICE_RANGE_HOURS || '3'),
+      volatilityPeriod: parseInt(process.env.TECHNICAL_VOLATILITY_PERIOD || '20'),
+      overboughtLevel: parseFloat(process.env.TECHNICAL_RSI_OVERBOUGHT || '70'),
+      oversoldLevel: parseFloat(process.env.TECHNICAL_RSI_OVERSOLD || '30'),
+      highVolumeThreshold: parseFloat(process.env.TECHNICAL_HIGH_VOLUME_THRESHOLD || '1.5'),
+      minVolumeRatio: parseFloat(process.env.TECHNICAL_MIN_VOLUME_RATIO || '0.8'),
+      confidenceThreshold: parseFloat(process.env.TECHNICAL_CONFIDENCE_THRESHOLD || '0.7'),
+      cacheTTL: parseInt(process.env.TECHNICAL_CACHE_TTL || '300')
+    };
+
+    return { klineConfig, analyzerConfig };
+  }
+
+  /**
    * 创建对应的交易引擎
    */
   private createEngine(strategy: StrategyOption, config: any, exchange: AsterExchangeAdapter): EnhancedTrendEngine | MakerEngine | OffsetMakerEngine {
@@ -122,12 +155,18 @@ class MultiInstanceLauncher {
         );
       
       case 'enhanced-trend':
+        const { klineConfig, analyzerConfig } = this.createEnhancedConfigs();
+        console.log('🔧 增强趋势引擎配置:');
+        console.log(`   Redis: ${klineConfig.redisHost}:${klineConfig.redisPort}`);
+        console.log(`   KDJ周期: ${analyzerConfig.kdjPeriod}, RSI周期: ${analyzerConfig.rsiPeriod}`);
+        console.log(`   置信度阈值: ${(analyzerConfig.confidenceThreshold * 100).toFixed(1)}%`);
+        
         return new EnhancedTrendEngine(
           config,
           exchange,
-          undefined, // klineConfig - 将使用默认配置
-          undefined, // analyzerConfig - 将使用默认配置 
-          true       // 启用增强模式
+          klineConfig,     // 完整的K线管理配置
+          analyzerConfig,  // 完整的技术分析配置 
+          true            // 启用增强模式
         );
       
       case 'maker':

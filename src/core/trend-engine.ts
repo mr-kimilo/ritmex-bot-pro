@@ -725,9 +725,10 @@ export class TrendEngine {
       this.getCurrentLossLimit()
     );
     
-    this.tradeLog.push("info", 
-      `🎯 常规止损计算: 原始=${originalStopPrice.toFixed(4)}, 优化=${stopPrice.toFixed(4)}, 买1=${bid1Price.toFixed(4)}, 卖1=${ask1Price.toFixed(4)}`
-    );
+    // 注释掉详细调试日志以减少输出
+    // this.tradeLog.push("info", 
+    //   `🎯 常规止损计算: 原始=${originalStopPrice.toFixed(4)}, 优化=${stopPrice.toFixed(4)}, 买1=${bid1Price.toFixed(4)}, 卖1=${ask1Price.toFixed(4)}`
+    // );
     const activationPrice = calcTrailingActivationPrice(
       position.entryPrice,
       Math.abs(position.positionAmt),
@@ -774,10 +775,10 @@ export class TrendEngine {
     const ask1 = Number(this.depthSnapshot?.asks?.[0]?.[0]) || currentMarketPrice;
     const marketOffsetPct = parseFloat(process.env.MARKET_PRICE_OFFSET_PCT || '0.006');
     
-    // 调试日志：显示价格信息
-    this.tradeLog.push("info", 
-      `📊 价格数据: 当前价=${currentMarketPrice.toFixed(4)}, 买1=${bid1.toFixed(4)}, 卖1=${ask1.toFixed(4)}, 入场价=${position.entryPrice.toFixed(4)}`
-    );
+    // 注释掉详细调试日志以减少输出
+    // this.tradeLog.push("info", 
+    //   `📊 价格数据: 当前价=${currentMarketPrice.toFixed(4)}, 买1=${bid1.toFixed(4)}, 卖1=${ask1.toFixed(4)}, 入场价=${position.entryPrice.toFixed(4)}`
+    // );
     
     // 只有当我们确实在盈利状态时，才调整利润锁定价格贴近市价
     const isInProfit = (direction === "long" && currentMarketPrice > position.entryPrice) ||
@@ -789,10 +790,10 @@ export class TrendEngine {
         : Math.min(ask1 + ask1 * marketOffsetPct, profitLockStopPrice)  // 做空：基于卖1价格设置止损
     ) : profitLockStopPrice; // 如果不在盈利，使用原始价格
       
-    // 记录利润锁定价格调整
-    this.tradeLog.push("info", 
-      `🔒 利润锁定计算: 原始=${profitLockStopPrice.toFixed(4)}, 优化=${optimizedProfitLockStopPrice.toFixed(4)}, 方向=${direction}, 盈利=${isInProfit}`
-    );
+    // 注释掉详细调试日志以减少输出
+    // this.tradeLog.push("info", 
+    //   `🔒 利润锁定计算: 原始=${profitLockStopPrice.toFixed(4)}, 优化=${optimizedProfitLockStopPrice.toFixed(4)}, 方向=${direction}, 盈利=${isInProfit}`
+    // );
 
     if (pnl > this.getCurrentProfitLockTrigger() || position.unrealizedProfit > this.getCurrentProfitLockTrigger()) {
       const tick = Math.max(1e-9, this.config.priceTick);

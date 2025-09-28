@@ -4,6 +4,7 @@ import { Box, Text, useInput } from "ink";
 import { EnhancedTrendEngine, type EnhancedTrendEngineSnapshot } from "../core/enhanced-trend-engine";
 import { AsterExchangeAdapter } from "../exchanges/aster-adapter";
 import { tradingConfig, redisConfig, technicalAnalysisConfig } from "../config";
+import { ApiCredentialsFactory } from "../api-credentials-factory";
 import type { KlineManagerConfig } from "../utils/redis-kline-manager";
 import type { MarketAnalyzerConfig } from "../utils/market-analyzer";
 import { TradingDashboard, type BaseTradingSnapshot } from "./components/TradingDashboard";
@@ -34,18 +35,26 @@ export function EnhancedTrendApp({ onExit }: EnhancedTrendAppProps) {
 
     async function initializeEngine() {
       try {
-        // 检查必要的环境变量
-        if (!process.env.ASTER_API_KEY || !process.env.ASTER_API_SECRET) {
-          throw new Error('缺少必要的API凭证环境变量');
-        }
-
         console.log('🔮 正在初始化增强趋势引擎...');
         
-        const exchange = new AsterExchangeAdapter({
-          apiKey: process.env.ASTER_API_KEY,
-          apiSecret: process.env.ASTER_API_SECRET,
-          symbol: tradingConfig.symbol,
-        });
+        // 使用API凭证工厂创建凭证
+        const credentialsFactory = new ApiCredentialsFactory();
+        let asterCredentials;
+        
+        try {
+          // 首先尝试通过交易对获取凭证
+          asterCredentials = credentialsFactory.createCredentialsBySymbol(tradingConfig.symbol);
+        } catch (error) {
+          console.log('� 尝试使用默认实例凭证...');
+          // 回退到默认实例
+          asterCredentials = credentialsFactory.createAsterCredentials('default', tradingConfig.symbol);
+        }
+        
+        if (!asterCredentials.apiKey || !asterCredentials.apiSecret) {
+          throw new Error('无法获取API凭证，请检查配置文件或环境变量');
+        }
+
+        const exchange = new AsterExchangeAdapter(asterCredentials);
 
         // K线管理器配置
         const klineConfig: KlineManagerConfig = {

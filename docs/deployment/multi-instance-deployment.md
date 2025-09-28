@@ -151,7 +151,106 @@ node --import tsx multi-instance-launcher.ts --config=.env.bnb
 node --import tsx multi-instance-launcher.ts --config=.env.sol
 ```
 
-## 📊 监控和管理
+## � 配置文件详细说明
+
+### 📁 环境文件读取机制
+
+多实例系统根据以下优先级读取配置文件：
+
+| npm脚本命令 | 对应的配置文件 | 实例名称 | 说明 |
+|------------|--------------|----------|------|
+| `npm run start:bnb` | `./config/.env.bnb` | BNB | BNB实例配置 |
+| `npm run start:sol` | `./config/.env.sol` | SOL | SOL实例配置 |
+| `npm run start:bnb-sol` | `./config/.env.bnb.sol` | BNB-SOL | BNB账户SOL交易 |
+| `npm run start:bnb-aster` | `./config/.env.bnb.aster` | BNB-ASTER | BNB账户ASTER交易 |
+| `npm run start:custom -- --config=.env.custom` | 指定路径 | 自定义 | 自定义配置 |
+| 直接运行 | `./config/.env` | 默认 | 默认配置文件 |
+
+### 🔄 配置加载逻辑
+
+**ConfigManager.ts** 中的加载逻辑：
+
+1. **命令行参数**: `--config=文件路径` 指定配置文件
+2. **npm脚本推断**: 根据 `process.env.npm_lifecycle_event` 自动推断
+3. **默认回退**: 使用 `./config/.env`
+
+```typescript
+// 配置文件推断示例
+if (process.env.npm_lifecycle_event) {
+  const event = process.env.npm_lifecycle_event;
+  if (event.includes(':bnb') && !event.includes('-')) {
+    configFile = './config/.env.bnb';     // npm run start:bnb
+  } else if (event.includes(':sol')) {
+    configFile = './config/.env.sol';     // npm run start:sol
+  } else if (event.includes('bnb-sol')) {
+    configFile = './config/.env.bnb.sol'; // npm run start:bnb-sol
+  }
+}
+```
+
+### 🎯 API凭据管理
+
+**双重配置系统**：
+
+#### 1. API配置文件 (主要方式)
+`./config/api-config.json` 统一管理：
+```json
+{
+  "instances": {
+    "sol": {
+      "symbol": "SOLUSDT",
+      "api_config": "sol_dedicated"
+    },
+    "btc": {
+      "symbol": "BTCUSDT", 
+      "api_config": "bnb_primary"
+    }
+  }
+}
+```
+
+#### 2. 环境变量 (回退方式)
+在`.env.xxx`文件中：
+```bash
+ASTER_API_KEY=your_api_key
+ASTER_API_SECRET=your_api_secret
+```
+
+### 📋 环境文件结构
+
+每个实例的环境文件包含：
+
+```bash
+# 基础配置
+INSTANCE_NAME=SOL
+TRADE_SYMBOL=SOLUSDT
+TRADE_AMOUNT=0.1
+
+# 风险管理
+LOSS_LIMIT=0.03
+TRAILING_PROFIT=0.2
+
+# Redis隔离配置
+REDIS_DB=2                          # 不同实例使用不同DB
+REDIS_KEY_PREFIX=ritmex_sol_       # 键前缀隔离
+
+# 技术分析参数
+TECHNICAL_KDJ_PERIOD=14
+TECHNICAL_RSI_PERIOD=14
+TECHNICAL_CONFIDENCE_THRESHOLD=0.75
+
+# 手续费监控
+FEE_RATE=0.0005
+ENABLE_FEE_PROTECTION=true
+```
+
+### 🔒 配置优先级
+
+1. **API配置文件** (`api-config.json`) - 最高优先级
+2. **环境变量文件** (`.env.xxx`) - 中等优先级
+3. **系统环境变量** - 回退选项
+
+## �📊 监控和管理
 
 ### 查看实例状态
 
