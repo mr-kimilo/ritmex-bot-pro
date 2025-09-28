@@ -94,7 +94,7 @@ export class TrendEngine {
   private readonly tradeLog: ReturnType<typeof createTradeLog>;
   private readonly feeMonitor: FeeMonitor;
   private readonly dynamicRiskManager: DynamicRiskManager | null = null;
-  private readonly greedyTakeProfitManager: GreedyTakeProfitManager;
+  private readonly greedyTakeProfitManager!: GreedyTakeProfitManager;
 
   private timer: ReturnType<typeof setInterval> | null = null;
   private processing = false;
@@ -111,6 +111,48 @@ export class TrendEngine {
   private dynamicTrailingProfit: number | null = null;
   private dynamicProfitLockTrigger: number | null = null;
   private dynamicProfitLockOffset: number | null = null;
+  private lastPositionAmount = 0;
+  private lastPositionEntryPrice = 0;
+  private wasPositionOpen = false;
+
+  private async detectManualPositionClose(position: PositionSnapshot, currentPrice: number): Promise<void> {
+    const hasPosition = Math.abs(position.positionAmt) > 1e-5;
+    const hadPosition = this.wasPositionOpen;
+    
+    // 如果之前有仓位，现在没有了，说明仓位被平掉了
+    if (hadPosition && !hasPosition) {
+      // 计算平仓盈亏
+      const direction = this.lastPositionAmount > 0 ? "long" : "short";
+      const pnl = (direction === "long" 
+        ? currentPrice - this.lastPositionEntryPrice 
+        : this.lastPositionEntryPrice - currentPrice) * Math.abs(this.lastPositionAmount);
+      
+      // 更新统计数据
+      this.totalTrades += 1;
+      this.totalProfit += pnl;
+      
+      // 记录手动平仓事件
+      const pnlText = pnl > 0 ? `盈利 $${pnl.toFixed(4)}` : `亏损 $${Math.abs(pnl).toFixed(4)}`;
+      this.tradeLog.push("close", 
+        `🔄 检测到手动平仓: ${direction === "long" ? "多头" : "空头"} ${Math.abs(this.lastPositionAmount)} @ $${currentPrice.toFixed(4)}`
+      );
+      this.tradeLog.push("info", `📊 平仓${pnl > 0 ? "盈利" : "亏损"}: $${Math.abs(pnl).toFixed(4)} USDT`);
+      
+      // 重置贪婪止盈管理器状态
+      this.greedyTakeProfitManager.forceExit();
+      
+      // 更新最后平仓时间
+      this.lastPositionCloseTime = Date.now();
+    }
+    
+    // 更新仓位状态追踪
+    this.wasPositionOpen = hasPosition;
+    if (hasPosition) {
+      this.lastPositionAmount = position.positionAmt;
+      this.lastPositionEntryPrice = position.entryPrice;
+    }
+  }
+
   private totalProfit = 0;
   private totalTrades = 0;
   private lastOpenPlan: OpenOrderPlan = { side: null, price: null };
@@ -299,13 +341,21 @@ export class TrendEngine {
           
           // 检查订单状态变化并记录手续费
           if (Array.isArray(orders)) {
-            for (const order of orders) {
-              // 添加调试日志来跟踪订单
-              if (process.env.DEBUG_TRADE_RECORDING === 'true') {
-                console.log(`🔍 检查订单: ${order.orderId} | 状态: ${order.status} | 成交: ${order.executedQty} | 价格: ${order.avgPrice}`);
+            // 只在调试模式下显示订单概览，避免频繁输出
+            if (process.env.DEBUG_TRADE_RECORDING === 'true') {
+              const filledOrders = orders.filter(o => o.symbol === this.config.symbol && o.status === 'FILLED');
+              if (filledOrders.length > 0) {
+                console.log(`🔍 发现 ${filledOrders.length} 个已成交订单需要处理`);
               }
-              
+            }
+            
+            for (const order of orders) {
               if (order.symbol === this.config.symbol && order.status === 'FILLED' && order.executedQty && order.avgPrice) {
+                // 只在实际处理成交订单时显示详细信息
+                if (process.env.DEBUG_TRADE_RECORDING === 'true') {
+                  console.log(`📊 处理成交订单: ${order.orderId} | ${order.side} ${order.executedQty} @ $${order.avgPrice}`);
+                }
+                
                 // 记录成交信息到交易日志
                 this.tradeLog.push("order", `✅ 订单成交: ${order.side} ${order.executedQty} @ $${Number(order.avgPrice).toFixed(4)}`);
                 
@@ -325,8 +375,9 @@ export class TrendEngine {
                 this.tradeLog.push("info", `💰 交易手续费: $${feeAmount.toFixed(6)} USDT (日累计: $${feeSummary.dailyFee.toFixed(6)} USDT)`);
                 
                 // 立即增加交易计数（不等到仓位关闭）
-                this.totalTrades += 1;
-                console.log(`📊 记录交易: 总交易数现在为 ${this.totalTrades}`);
+                // 注释：这里不增加totalTrades，因为应该在仓位完全关闭时才算一笔完整交易
+                // this.totalTrades += 1;
+                // console.log(`📊 记录交易: 总交易数现在为 ${this.totalTrades}`);
                 
                 if (feeResult.shouldStop) {
                   this.tradeLog.push("warning", `🚨 手续费保护触发: ${feeResult.reason}`);
@@ -446,13 +497,16 @@ export class TrendEngine {
       
       const position = getPosition(this.accountSnapshot, this.config.symbol);
 
+      // 检测手动平仓：如果之前有仓位，现在没有了，且不是通过系统平仓的
+      await this.detectManualPositionClose(position, price);
+
       if (Math.abs(position.positionAmt) < 1e-5) {
         await this.handleOpenPosition(price, sma30);
       } else {
         const result = await this.handlePositionManagement(position, price);
         if (result.closed) {
-          // 不在这里增加 totalTrades，因为已经在订单成交时计算了
-          // this.totalTrades += 1;  // 注释掉避免重复计算
+          // 在仓位完全关闭时同时更新交易计数和盈亏
+          this.totalTrades += 1;
           this.totalProfit += result.pnl;
         }
       }
@@ -729,9 +783,10 @@ export class TrendEngine {
         );
         await this.tryReplaceStop(stopSide, currentStop, stopPrice, price);
       } else {
-        this.tradeLog.push("info", 
-          `✓ 现有止损价格合理: ${existingStopPrice.toFixed(4)} vs 计算价格 ${stopPrice.toFixed(4)}`
-        );
+        // 移除频繁的"价格合理"日志，避免UI闪动
+        // this.tradeLog.push("info", 
+        //   `✓ 现有止损价格合理: ${existingStopPrice.toFixed(4)} vs 计算价格 ${stopPrice.toFixed(4)}`
+        // );
       }
     }
 
@@ -1190,12 +1245,16 @@ export class TrendEngine {
       this.dynamicProfitLockTrigger = newParams.profitLockTrigger;
       this.dynamicProfitLockOffset = newParams.profitLockOffset;
 
-      // 记录更新日志
+      // 记录更新日志 (减少频繁输出，避免UI闪动)
       if (isFirstCalculation) {
         this.tradeLog.push("info", `🎯 动态风险参数初始化 (价格: $${currentPrice.toFixed(3)})`);
+        const summary = manager.getUpdateSummary(newParams, currentPrice);
+        this.tradeLog.push("info", summary);
+      } else {
+        // 参数更新时不记录详细日志，避免频繁输出
+        // const summary = manager.getUpdateSummary(newParams, currentPrice);
+        // this.tradeLog.push("info", summary);
       }
-      const summary = manager.getUpdateSummary(newParams, currentPrice);
-      this.tradeLog.push("info", summary);
       
       this.lastRiskUpdatePrice = currentPrice;
       

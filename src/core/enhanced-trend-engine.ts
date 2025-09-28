@@ -320,29 +320,37 @@ export class EnhancedTrendEngine {
       this.feeMonitor.recordTrade({
         symbol: this.config.symbol,
         side,
-        quantity: this.config.positionSize,
+        quantity: this.config.tradeAmount,
         price,
         orderId: `enhanced_${Date.now()}`
       });
 
       // 使用基础引擎的订单提交逻辑
+      const openOrders = (this.baseEngine as any).openOrders;
       const locks = (this.baseEngine as any).locks as OrderLockMap;
       const timers = (this.baseEngine as any).timers as OrderTimerMap;
       const pending = (this.baseEngine as any).pending as OrderPendingMap;
 
       await placeMarketOrder(
         this.exchange,
+        this.config.symbol,
+        openOrders,
         locks,
         timers,
         pending,
-        this.config.symbol,
         side,
-        this.config.positionSize,
+        this.config.tradeAmount,
         (this.baseEngine as any).tradeLog,
-        reason
+        false,
+        {
+          markPrice: (this.baseEngine as any).accountSnapshot?.position?.markPrice || price,
+          expectedPrice: price,
+          maxPct: this.config.maxCloseSlippagePct,
+        },
+        { qtyStep: this.config.qtyStep }
       );
 
-      console.log(`✅ 增强趋势订单已提交: ${side} ${this.config.positionSize} @ $${price.toFixed(4)}`);
+      console.log(`✅ 增强趋势订单已提交: ${side} ${this.config.tradeAmount} @ $${price.toFixed(4)}`);
       
     } catch (error) {
       console.error(`❌ 增强趋势订单提交失败:`, error);

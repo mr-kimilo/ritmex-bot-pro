@@ -1,4 +1,4 @@
-import * as React from "react";
+import React from "react";
 import { useEffect, useState, useRef } from "react";
 import { Box, Text, useInput } from "ink";
 import { EnhancedTrendEngine, type EnhancedTrendEngineSnapshot } from "../core/enhanced-trend-engine";
