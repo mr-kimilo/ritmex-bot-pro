@@ -109,9 +109,22 @@ export function EnhancedTrendApp({ onExit }: EnhancedTrendAppProps) {
         // 手动触发一次分析
         await engine.forceRefreshAnalysis();
         
+        // 定期更新快照以确保UI数据同步 (特别是手续费数据)
+        const updateInterval = setInterval(() => {
+          if (mounted && engine) {
+            const currentSnapshot = engine.getSnapshot();
+            setSnapshot(currentSnapshot);
+          }
+        }, 5000); // 每5秒更新一次
+        
         if (mounted) {
           setIsInitialized(true);
         }
+
+        // 清理定时器
+        return () => {
+          clearInterval(updateInterval);
+        };
 
       } catch (error) {
         console.error('🚫 增强趋势引擎初始化失败:', error);
@@ -164,6 +177,17 @@ export function EnhancedTrendApp({ onExit }: EnhancedTrendAppProps) {
   // 转换为通用快照格式
   const dashboardSnapshot: BaseTradingSnapshot = {
     ...snapshot,
+    feeStats: snapshot.feeStats || {  // 确保手续费统计始终可用
+      totalFee: 0,
+      dailyFee: 0,
+      dailyFeePercent: 0,
+      hourlyFeePercent: 0,
+      tradeCount: 0,
+      avgFeeRate: 0,
+      isWarning: false,
+      shouldStop: false,
+      feeEfficiency: 0
+    },
     enhancedMode: true,
     enhanced: {
       enabled: snapshot.enhanced?.enabled || false,

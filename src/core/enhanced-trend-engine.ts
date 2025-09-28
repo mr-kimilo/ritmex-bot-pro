@@ -126,6 +126,11 @@ export class EnhancedTrendEngine {
         });
       }, this.analysisInterval);
       
+      // 定期触发UI更新 (确保手续费数据及时更新)
+      setInterval(() => {
+        (this.baseEngine as any).emitUpdate?.();
+      }, 10000); // 每10秒触发一次更新
+      
       // 立即执行一次分析
       setTimeout(() => {
         this.performEnhancedTradingDecision().catch(console.error);
@@ -352,6 +357,9 @@ export class EnhancedTrendEngine {
 
       console.log(`✅ 增强趋势订单已提交: ${side} ${this.config.tradeAmount} @ $${price.toFixed(4)}`);
       
+      // 订单提交后，手动触发更新事件以确保手续费数据及时更新到UI
+      this.triggerUpdate();
+      
     } catch (error) {
       console.error(`❌ 增强趋势订单提交失败:`, error);
     }
@@ -401,6 +409,18 @@ export class EnhancedTrendEngine {
     // 清理增强功能资源
     if (this.isEnhancedEnabled && this.klineManager) {
       this.klineManager.disconnect().catch(console.error);
+    }
+  }
+
+  /**
+   * 手动触发更新事件，确保UI及时获取最新数据（特别是手续费数据）
+   */
+  private triggerUpdate(): void {
+    try {
+      // 通过基础引擎的emitUpdate方法触发更新
+      (this.baseEngine as any).emitUpdate?.();
+    } catch (error) {
+      console.error('手动触发更新失败:', error);
     }
   }
 
