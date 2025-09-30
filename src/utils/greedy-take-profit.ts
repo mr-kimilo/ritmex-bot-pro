@@ -97,11 +97,12 @@ export class GreedyTakeProfitManager {
     const elapsed = Date.now() - this.state.activatedAt;
     if (elapsed > this.config.maxWaitTime) {
       const extraProfit = this.calculateProfitPercent(currentPrice, this.state.entryPrice, this.state.direction);
+      const initialProfitPercent = this.state.initialProfitPercent; // 保存初始利润百分比
       this.resetState();
       return { 
         shouldTakeProfit: true, 
         reason: 'greedy_timeout',
-        extraProfit: extraProfit - this.state.initialProfitPercent
+        extraProfit: extraProfit - initialProfitPercent
       };
     }
 

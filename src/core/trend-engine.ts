@@ -881,15 +881,16 @@ export class TrendEngine {
       // 记录止盈原因
       let takeProfitReason = "标准止盈";
       if (greedyResult.shouldTakeProfit) {
+        const extraProfitPercent = (greedyResult.extraProfit || 0) * 100;
         switch (greedyResult.reason) {
           case 'extra_profit_achieved':
-            takeProfitReason = `贪婪止盈-额外收益达成 (+${(greedyResult.extraProfit! * 100).toFixed(2)}%)`;
+            takeProfitReason = `贪婪止盈-额外收益达成 (+${extraProfitPercent.toFixed(2)}%)`;
             break;
           case 'price_reversal_detected':
-            takeProfitReason = `贪婪止盈-价格反转 (+${(greedyResult.extraProfit! * 100).toFixed(2)}%)`;
+            takeProfitReason = `贪婪止盈-价格反转 (+${extraProfitPercent.toFixed(2)}%)`;
             break;
           case 'greedy_timeout':
-            takeProfitReason = `贪婪止盈-超时平仓 (+${(greedyResult.extraProfit! * 100).toFixed(2)}%)`;
+            takeProfitReason = `贪婪止盈-超时平仓 (+${extraProfitPercent.toFixed(2)}%)`;
             break;
         }
       }
